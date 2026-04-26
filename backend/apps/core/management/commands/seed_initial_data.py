@@ -210,7 +210,7 @@ ROLES: dict[str, dict] = {
 
 # Menu tree. Tree definisi sederhana — anak diidentifikasi via parent_code.
 MENUS: list[dict] = [
-    {"code": "dashboard", "label": "Dashboard", "icon": "layout-dashboard", "route": "/", "order": 10},
+    {"code": "dashboard", "label": "Dashboard", "icon": "layout-dashboard", "route": "/dashboard", "order": 10},
     {"code": "peta", "label": "Peta", "icon": "map", "route": "/peta", "order": 15},
     {"code": "galeri", "label": "Galeri Foto", "icon": "image", "route": "/galeri", "order": 20},
     {"code": "kontrak", "label": "Kontrak", "icon": "file-text", "route": "/kontrak", "order": 30},

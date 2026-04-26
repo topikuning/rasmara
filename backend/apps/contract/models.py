@@ -58,7 +58,8 @@ class Contract(SoftDeleteModel):
     start_date = models.DateField()
     end_date = models.DateField()
     duration_days = models.IntegerField(
-        help_text="Durasi total dalam hari (di-update otomatis dari start/end).",
+        default=0,
+        help_text="Durasi total dalam hari (otomatis dihitung di save()).",
     )
 
     status = models.CharField(
@@ -87,6 +88,13 @@ class Contract(SoftDeleteModel):
 
     def __str__(self) -> str:
         return f"{self.number} - {self.name}"
+
+    def save(self, *args, **kwargs):
+        # Auto-hitung duration_days dari start/end (inklusif).
+        # Bekerja konsisten di semua path: DRF, admin, script, test.
+        if self.start_date and self.end_date:
+            self.duration_days = (self.end_date - self.start_date).days + 1
+        return super().save(*args, **kwargs)
 
     # ----- helpers nilai (Bagian 7) -----
     @property

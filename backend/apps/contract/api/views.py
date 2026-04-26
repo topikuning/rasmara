@@ -15,8 +15,6 @@ from ..services import (
     clear_godmode,
     evaluate_activation_gates,
     filter_contracts_for_user,
-    is_user_in_scope,
-    recalc_duration,
     set_godmode,
     transition,
 )
@@ -82,17 +80,15 @@ class ContractViewSet(viewsets.ModelViewSet):
         return ContractDetailSerializer
 
     def perform_create(self, serializer):
-        # current_value sudah di-set = original_value di serializer.validate()
-        contract = serializer.save(
+        # current_value di-set = original_value di serializer.validate().
+        # duration_days dihitung otomatis di Contract.save().
+        serializer.save(
             created_by=self.request.user, updated_by=self.request.user,
         )
-        recalc_duration(contract)
-        contract.save(update_fields=["duration_days", "updated_at"])
 
     def perform_update(self, serializer):
-        contract = serializer.save(updated_by=self.request.user)
-        recalc_duration(contract)
-        contract.save(update_fields=["duration_days", "updated_at"])
+        # duration_days otomatis recompute di Contract.save() saat date berubah.
+        serializer.save(updated_by=self.request.user)
 
     def perform_destroy(self, instance: Contract):
         instance.soft_delete(user=self.request.user)
