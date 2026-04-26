@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 250 250 250;
+  --fg: 23 23 23;
+  --muted: 245 245 245;
+  --muted-fg: 115 115 115;
+  --card: 255 255 255;
+  --card-fg: 23 23 23;
+  --border: 229 229 229;
+  --accent: 245 245 245;
+  --accent-fg: 23 23 23;
+  --primary: 37 99 235;        /* blue-600 */
+  --primary-fg: 255 255 255;
+  --success: 22 163 74;
+  --warning: 217 119 6;
+  --danger: 220 38 38;
+}
+
+.dark {
+  --bg: 13 17 23;
+  --fg: 230 237 243;
+  --muted: 22 27 34;
+  --muted-fg: 139 148 158;
+  --card: 22 27 34;
+  --card-fg: 230 237 243;
+  --border: 48 54 61;
+  --accent: 30 36 44;
+  --accent-fg: 230 237 243;
+  --primary: 88 166 255;
+  --primary-fg: 13 17 23;
+  --success: 56 161 105;
+  --warning: 217 137 30;
+  --danger: 248 81 73;
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+html, body {
+  background: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium
+           transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-primary-fg hover:opacity-90;
+  }
+  .btn-secondary {
+    @apply btn bg-muted text-fg hover:bg-accent;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent hover:bg-muted;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90;
+  }
+  .input {
+    @apply w-full rounded-lg border bg-card px-3 py-2 text-sm
+           placeholder-muted-fg outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+  }
+  .label {
+    @apply block text-sm font-medium text-fg mb-1.5;
+  }
+  .card {
+    @apply rounded-xl border bg-card text-card-fg shadow-sm;
+  }
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=RASMARA Daily Backup
+Requires=docker.service
+After=docker.service rasmara.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/rasmara/app
+ExecStart=/bin/bash /opt/rasmara/app/deploy/debian11/backup.sh
+User=rasmara

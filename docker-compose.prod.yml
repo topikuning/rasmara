@@ -1,0 +1,137 @@
+# Stack production untuk VPS Debian 11.
+# Akses awal: HTTP via IP di port 80 (SITE_ADDRESS=:80, default).
+# Setelah punya domain: set SITE_ADDRESS=https://your-domain.tld di .env.prod
+# untuk mengaktifkan TLS otomatis (Let's Encrypt) via Caddy.
+name: rasmara
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /opt/rasmara/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - /opt/rasmara/data/minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      mc mb -p local/${MINIO_BUCKET} || true;
+      mc anonymous set download local/${MINIO_BUCKET} || true;
+      exit 0;
+      "
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: rasmara.settings.prod
+    volumes:
+      - /opt/rasmara/data/backend-static:/app/staticfiles
+      - /opt/rasmara/data/backend-media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: gunicorn rasmara.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 90 --access-logfile -
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: rasmara.settings.prod
+    volumes:
+      - /opt/rasmara/data/backend-media:/app/media
+    depends_on:
+      - backend
+      - redis
+    command: celery -A rasmara worker -l info --concurrency=2
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: rasmara.settings.prod
+    depends_on:
+      - backend
+      - redis
+    command: celery -A rasmara beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - backend
+    command: node server.js
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@rasmara.local}
+    volumes:
+      - ./deploy/debian11/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/rasmara/data/caddy:/data
+      - /opt/rasmara/data/caddy-config:/config
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"

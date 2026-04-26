@@ -1,0 +1,70 @@
+# Caddy konfigurasi RASMARA.
+#
+# Default: SITE_ADDRESS=:80  -> akses HTTP via IP, port 80, TANPA TLS.
+# Production dengan domain: SITE_ADDRESS=https://your-domain.tld
+#                           -> Caddy otomatis ambil sertifikat Let's Encrypt.
+#
+# ADMIN_EMAIL dipakai Let's Encrypt untuk notifikasi expire (boleh kosong saat
+# mode :80 tanpa TLS).
+
+{
+	email {$ADMIN_EMAIL}
+	# Untuk uji coba TLS sebelum production:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$SITE_ADDRESS} {
+	encode gzip zstd
+
+	# ----- API backend (Django + DRF) -----
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Django admin (opsional, untuk debug)
+	handle /django-admin/* {
+		reverse_proxy backend:8000
+	}
+
+	# Static files Django (admin, DRF browsable API)
+	handle /static/* {
+		reverse_proxy backend:8000
+	}
+
+	# Media files (foto laporan, dokumen kontrak) — disajikan langsung dari MinIO
+	# saat sudah pakai presigned URL; sementara via Django.
+	handle /media/* {
+		reverse_proxy backend:8000
+	}
+
+	# ----- Frontend (Next.js) — semua sisanya -----
+	handle {
+		reverse_proxy frontend:3000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Header keamanan dasar (HTTPS-only header diabaikan otomatis kalau bukan TLS)
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+		# HSTS hanya saat TLS aktif
+		?Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 100mb
+			roll_keep 10
+		}
+		format json
+	}
+}

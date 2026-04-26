@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+.pnpm-store/
+.vercel/
+
+# Env
+.env
+.env.local
+.env.*.local
+.env.dev
+.env.prod
+*.pem
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker / data volumes (lokal dev)
+data/
+backups/
+.docker-data/
+
+# OS
+Thumbs.db
