@@ -76,12 +76,18 @@ Repo bebas diletakkan di mana saja (mis. `~/rasmara`, `/opt/rasmara/app`,
 ```bash
 # Misal repo Anda di ~/rasmara :
 cd ~/rasmara
+
+# WAJIB: copy template ke .env.prod (BUKAN .env). Script production baca dari .env.prod.
 cp .env.example .env.prod
 nano .env.prod                # ganti password & secret. SITE_ADDRESS biarkan ":80".
 
 bash deploy/debian11/02-app-bootstrap.sh
 # Akses: http://<IP_VPS_ANDA>
 ```
+
+> **Aturan penamaan env file:**
+> - DEV (lokal `make up`)        →  `.env`
+> - PRODUCTION (VPS, `make prod-up`)  →  `.env.prod`
 
 Data volume Docker (postgres, media, dst.) otomatis dibuat di `<repo>/data/`,
 backup di `<repo>/backups/`. Override via env: `DATA_DIR=/path/lain bash ...`.
