@@ -9,6 +9,8 @@ import { swrFetcher } from "@/lib/api/client";
 import { ContractTabs } from "@/components/contract/ContractTabs";
 import { ContractStatusBadge } from "@/components/contract/StatusBadge";
 
+export const dynamic = "force-dynamic";
+
 type Summary = {
   id: string;
   number: string;

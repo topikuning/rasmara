@@ -8,6 +8,8 @@ import { changePassword, fetchMe } from "@/lib/auth/actions";
 import { useAuthStore } from "@/lib/auth/store";
 import { ApiError } from "@/lib/api/client";
 
+export const dynamic = "force-dynamic";
+
 export default function GantiPasswordPage() {
   const router = useRouter();
   const { me, hydrated } = useAuthStore();

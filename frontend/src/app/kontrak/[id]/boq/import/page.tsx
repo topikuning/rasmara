@@ -1,8 +1,10 @@
 "use client";
 
-import { use, useState } from "react";
+import { Suspense, use, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 import {
   ArrowLeft, Download, Upload, CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
@@ -26,6 +28,14 @@ type Preview = {
 };
 
 export default function ImportBoqPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div className="card p-6 text-center text-muted-fg">Memuat...</div>}>
+      <ImportBoqInner params={params} />
+    </Suspense>
+  );
+}
+
+function ImportBoqInner({ params }: { params: Promise<{ id: string }> }) {
   const { id: contractId } = use(params);
   const router = useRouter();
   const sp = useSearchParams();

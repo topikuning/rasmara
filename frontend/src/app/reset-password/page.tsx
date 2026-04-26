@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 import { api, ApiError } from "@/lib/api/client";
 
+export const dynamic = "force-dynamic";
+
 function ResetForm() {
   const router = useRouter();
   const sp = useSearchParams();
