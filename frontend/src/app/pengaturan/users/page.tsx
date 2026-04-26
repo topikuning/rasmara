@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { api, ApiError, swrFetcher } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/auth/store";
 import { formatTanggalJam } from "@/lib/format/tanggal";
+import CredentialDialog, { type CredentialItem } from "@/components/form/CredentialDialog";
 
 type User = {
   id: string;
@@ -27,6 +28,13 @@ type Role = { id: string; code: string; name: string };
 
 type Paginated<T> = { count: number; next: string | null; previous: string | null; results: T[] };
 
+type CredState = {
+  title: string;
+  description?: string;
+  items: CredentialItem[];
+  filename: string;
+} | null;
+
 export default function UsersPage() {
   const { hasPerm } = useAuthStore();
   const [search, setSearch] = useState("");
@@ -39,18 +47,34 @@ export default function UsersPage() {
   const roles = rolesData?.results ?? [];
 
   const [showCreate, setShowCreate] = useState(false);
+  const [cred, setCred] = useState<CredState>(null);
 
   const canCreate = hasPerm("user.create");
   const canUpdate = hasPerm("user.update");
 
   async function onResetPassword(u: User) {
-    if (!confirm(`Reset password user "${u.username}"?`)) return;
+    if (!confirm(`Reset password user "${u.username}"?\n\nPassword baru akan ditampilkan satu kali — pastikan Anda siap mencatat / menyalin.`)) {
+      return;
+    }
     try {
-      const res = await api<{ initial_password: string }>(
+      const res = await api<{ initial_password: string; username?: string }>(
         `/users/${u.id}/reset-password/`,
         { method: "POST", body: {} },
       );
-      toast.success(`Password baru: ${res.initial_password}`, { duration: 15000 });
+      setCred({
+        title: `Password Baru: ${u.username}`,
+        description: `Password user "${u.full_name || u.username}" berhasil di-reset.`,
+        items: [
+          { label: "Username", value: u.username },
+          {
+            label: "Password Baru",
+            value: res.initial_password,
+            secret: true,
+            hint: "User wajib mengganti password saat login berikutnya.",
+          },
+        ],
+        filename: `reset-${u.username}`,
+      });
       mutate();
     } catch (err) {
       if (err instanceof ApiError) toast.error(err.message);
@@ -143,16 +167,46 @@ export default function UsersPage() {
         <CreateUserModal
           roles={roles}
           onClose={() => setShowCreate(false)}
-          onCreated={() => { setShowCreate(false); mutate(); }}
+          onCreated={(created) => {
+            setShowCreate(false);
+            mutate();
+            if (created.initial_password) {
+              setCred({
+                title: `User Baru: ${created.full_name || created.username}`,
+                description: "User berhasil dibuat. Berikan kredensial berikut ke pemilik akun.",
+                items: [
+                  { label: "Username", value: created.username },
+                  {
+                    label: "Password Awal",
+                    value: created.initial_password,
+                    secret: true,
+                    hint: "User wajib mengganti password saat login pertama.",
+                  },
+                ],
+                filename: `kredensial-${created.username}`,
+              });
+            } else {
+              toast.success("User berhasil dibuat.");
+            }
+          }}
         />
       )}
+
+      <CredentialDialog
+        open={!!cred}
+        title={cred?.title}
+        description={cred?.description}
+        items={cred?.items ?? []}
+        filenameBase={cred?.filename ?? "kredensial"}
+        onClose={() => setCred(null)}
+      />
     </div>
   );
 }
 
 function CreateUserModal({
   roles, onClose, onCreated,
-}: { roles: Role[]; onClose: () => void; onCreated: () => void }) {
+}: { roles: Role[]; onClose: () => void; onCreated: (u: any) => void }) {
   const [form, setForm] = useState({
     username: "", full_name: "", email: "", phone: "",
     role_id: "" as string, password: "",
@@ -175,15 +229,11 @@ function CreateUserModal({
           is_active: true,
         },
       });
-      if (res.initial_password) {
-        toast.success(`User dibuat. Password awal: ${res.initial_password}`, { duration: 15000 });
-      } else {
-        toast.success("User berhasil dibuat.");
-      }
-      onCreated();
+      onCreated(res);
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error(`${err.message}${err.details ? "\n" + JSON.stringify(err.details) : ""}`);
+        const detail = err.details ? "\n" + JSON.stringify(err.details) : "";
+        toast.error(`${err.message}${detail}`);
       }
     } finally {
       setSubmitting(false);
@@ -226,6 +276,10 @@ function CreateUserModal({
           <label className="label">Password (kosongkan untuk auto-generate)</label>
           <input className="input" type="text" value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <p className="text-xs text-muted-fg mt-1">
+            Jika kosong, sistem generate password random — akan ditampilkan di dialog
+            setelah simpan.
+          </p>
         </div>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn-secondary flex-1" disabled={submitting}>
