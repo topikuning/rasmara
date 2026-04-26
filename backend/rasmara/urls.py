@@ -12,6 +12,7 @@ api_v1_patterns = [
     path("version/", VersionView.as_view(), name="version"),
     path("auth/", include("apps.core.urls.auth")),
     path("", include("apps.core.urls.rbac")),
+    path("", include("apps.master.api.urls")),
 ]
 
 urlpatterns = [
