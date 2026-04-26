@@ -1,4 +1,4 @@
-# PROMPT: Membangun Sistem MARLIN dari Nol
+# PROMPT: Membangun Sistem RASMARA dari Nol
 
 > Salin seluruh isi file ini sebagai pesan pertama di sesi AI baru. Atau letakkan sebagai `CLAUDE.md` di root repo kosong agar otomatis termuat oleh Claude Code.
 
@@ -20,7 +20,7 @@ Sebelum menulis kode satu baris pun:
 
 ## 1. Konteks Bisnis
 
-**Domain:** Sistem monitoring pelaksanaan kontrak konstruksi infrastruktur — khususnya proyek Kampung Nelayan Merah Putih (KNMP) di bawah Kementerian Kelautan & Perikanan. Compliance terhadap Perpres 16/2018 ps. 54 (perubahan kontrak via Addendum/CCO).
+**Domain:** Sistem monitoring pelaksanaan kontrak konstruksi infrastruktur — kkhususnya proyek pemerintahan. Compliance terhadap Perpres 16/2018 ps. 54 (perubahan kontrak via Addendum/CCO).
 
 **Tujuan utama:**
 
