@@ -70,14 +70,21 @@ Stack default dirancang untuk **VPS 1 vCPU + 2 GB RAM**.
 
 ### VPS 1 vCPU + 2 GB RAM
 
+Repo bebas diletakkan di mana saja (mis. `~/rasmara`, `/opt/rasmara/app`,
+`/home/rasmara/rasmara`) — script auto-derive path.
+
 ```bash
-cd /opt/rasmara/app
+# Misal repo Anda di ~/rasmara :
+cd ~/rasmara
 cp .env.example .env.prod
 nano .env.prod                # ganti password & secret. SITE_ADDRESS biarkan ":80".
 
 bash deploy/debian11/02-app-bootstrap.sh
 # Akses: http://<IP_VPS_ANDA>
 ```
+
+Data volume Docker (postgres, media, dst.) otomatis dibuat di `<repo>/data/`,
+backup di `<repo>/backups/`. Override via env: `DATA_DIR=/path/lain bash ...`.
 
 Cek konsumsi resource real-time:
 ```bash

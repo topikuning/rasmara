@@ -2,100 +2,107 @@
 
 Manual ini menjelaskan **langkah lengkap** memasang RASMARA di VPS Debian 11 (Bullseye)
 dari kondisi server bersih sampai aplikasi bisa diakses **via IP di port 80** (HTTP).
-Setelah Anda punya domain & DNS terarah, switch ke HTTPS hanya butuh edit 1 baris env.
+
+## Prinsip Path
+
+**Tidak ada path hardcoded.** Semua script di folder ini menurunkan path repo
+secara otomatis dari lokasi script-nya sendiri:
+
+```
+<repo>/                       <- bisa di mana saja: ~/rasmara, /opt/rasmara/app,
+├── docker-compose.prod.yml      /home/user/projects/rasmara, dst.
+├── .env.prod
+├── data/                     <- volume Docker (auto-dibuat oleh script)
+│   ├── postgres/
+│   ├── backend-static/
+│   ├── backend-media/
+│   └── caddy/
+├── backups/                  <- backup harian (auto-dibuat)
+└── deploy/debian11/          <- script-script ini
+    ├── 00-prerequisites.sh
+    ├── 01-docker.sh
+    ├── 02-app-bootstrap.sh
+    ├── 03-update.sh
+    ├── backup.sh / restore.sh
+    └── install-systemd.sh
+```
+
+Kalau perlu override path, tersedia env var:
+- `REPO_DIR` — default: derive dari lokasi script
+- `DATA_DIR` — default: `$REPO_DIR/data`
+- `BACKUP_DIR` — default: `$REPO_DIR/backups`
+- `ENVF` — default: `.env.prod`
+- `PROFILES` — default: kosong (stack default)
 
 ---
 
-## Ringkasan Arus Akses
+## Spesifikasi Minimum
 
-```
-Pengunjung (browser)
-       │  HTTP
-       v
-+------------------+      :80 / :443
-|  Caddy (proxy)   |  ← reverse proxy + auto TLS (jika DOMAIN diisi)
-+------------------+
-   ├── /api/*       →  backend:8000  (Django + DRF)
-   ├── /django-admin/ → backend:8000
-   ├── /static/*    →  backend:8000
-   ├── /media/*     →  backend:8000
-   └── (lainnya)    →  frontend:3000  (Next.js)
-```
-
-- **Mode IP** (default awal): `SITE_ADDRESS=:80`. Anda akses `http://<IP_VPS>` langsung.
-- **Mode Domain**: `SITE_ADDRESS=https://your-domain.tld` + `DOMAIN=your-domain.tld`.
-  Caddy ambil sertifikat Let's Encrypt otomatis. **Tidak perlu certbot manual**.
+| Resource | Minimum | Direkomendasikan |
+|---|---|---|
+| CPU | 1 vCPU | 2+ vCPU |
+| RAM | 2 GB (+ 4GB swap) | 4 GB |
+| Disk | 20 GB SSD | 50 GB SSD |
+| OS | Debian 11 | |
 
 ---
 
 ## 0. Prasyarat
 
-| Item | Minimum | Direkomendasikan |
-|---|---|---|
-| CPU | 2 vCPU | 4 vCPU |
-| RAM | 4 GB | 8 GB |
-| Disk | 50 GB SSD | 100 GB SSD |
-| OS | Debian 11 (Bullseye) bersih | |
-
-Yang harus Anda siapkan sebelum mulai:
-1. Akses **SSH root** ke VPS (atau user dengan sudo).
-2. **IP publik** VPS sudah diketahui.
-3. (Opsional, untuk HTTPS): **domain** dengan DNS A-record mengarah ke IP VPS.
-4. **SSH public key** Anda di clipboard / file lokal.
-5. (Opsional): kredensial SMTP untuk notifikasi email.
+1. SSH root ke VPS.
+2. SSH public key Anda sudah ada di `/root/.ssh/authorized_keys` SEBELUM lanjut.
+3. (Opsional) domain dengan A-record ke IP VPS — untuk HTTPS.
 
 ---
 
 ## 1. Bootstrap Server (sekali pakai, sebagai root)
 
-Login SSH sebagai `root`:
-
 ```bash
 ssh root@<IP_VPS>
-```
 
-Clone repo (atau upload tar bila tidak ada git):
-
-```bash
+# Pilih lokasi repo. Bebas — di bawah ini contoh /home/rasmara:
+mkdir -p /home && cd /home
 apt update && apt install -y git
-mkdir -p /opt/rasmara
-cd /opt/rasmara
-git clone https://github.com/topikuning/rasmara.git app
-cd app
-```
+# (jika user 'rasmara' belum ada, dibuat oleh 00-prerequisites.sh nanti)
 
-Jalankan script bootstrap (akan: install paket dasar, buat user `rasmara`, copy SSH key,
-hardening SSH, firewall ufw, fail2ban, swap 4GB, set timezone Asia/Jakarta):
+# Clone repo (git ke folder pilihan Anda)
+git clone -b claude/study-api-timeout-1mtuQ https://github.com/topikuning/rasmara.git
+cd rasmara
 
-```bash
+# Bootstrap OS (firewall, swap, user 'rasmara' + SSH key, dll.)
 bash deploy/debian11/00-prerequisites.sh
 ```
 
-**Penting:** script akan men-disable login root via SSH. Pastikan Anda sudah
-men-copy SSH public key Anda ke `/root/.ssh/authorized_keys` SEBELUM menjalankan
-script ini, karena script akan menyalin authorized_keys ke `rasmara` user.
+Script akan disable login root via SSH. **Pastikan SSH public key sudah ter-copy ke
+authorized_keys dulu**, karena script akan menyalin ke user `rasmara`.
 
-Selanjutnya **logout dan login ulang sebagai `rasmara`**:
+Logout dan login ulang sebagai `rasmara`. Pindahkan repo (kalau perlu) ke
+folder yang aksesnya sesuai user `rasmara`:
 
 ```bash
 exit
 ssh rasmara@<IP_VPS>
+
+# Pindahkan repo agar dapat diakses tanpa sudo (opsional)
+sudo mv /home/rasmara /home/rasmara-old || true   # jika ada konflik
+sudo mv /root/rasmara /home/rasmara/rasmara 2>/dev/null || true
+# atau clone ulang sebagai rasmara
+cd ~
+git clone -b claude/study-api-timeout-1mtuQ https://github.com/topikuning/rasmara.git
+cd rasmara
 ```
 
 ---
 
-## 2. Install Docker & Docker Compose
-
-Sebagai user `rasmara`:
+## 2. Install Docker
 
 ```bash
-cd /opt/rasmara/app
 sudo bash deploy/debian11/01-docker.sh
-# Setelah selesai, logout-login sekali lagi agar group `docker` aktif:
+# Logout-login sekali lagi agar group 'docker' aktif:
 exit
 ssh rasmara@<IP_VPS>
-docker --version          # cek
-docker compose version    # cek
+cd ~/rasmara
+docker compose version
 ```
 
 ---
@@ -103,19 +110,17 @@ docker compose version    # cek
 ## 3. Konfigurasi Environment
 
 ```bash
-cd /opt/rasmara/app
 cp .env.example .env.prod
 nano .env.prod
 ```
 
 Isi minimal yang **WAJIB diganti**:
-- `DJANGO_SECRET_KEY` → string random ≥ 50 karakter (bisa pakai `openssl rand -base64 60`)
+- `DJANGO_SECRET_KEY` → string random ≥50 karakter (`openssl rand -base64 60`)
 - `POSTGRES_PASSWORD` → password random
-- `MINIO_ROOT_PASSWORD` → password random
-- `SUPERADMIN_PASSWORD` → password awal Superadmin (akan dipaksa ganti saat login pertama)
-- `ADMIN_EMAIL` → email kontak admin (untuk Let's Encrypt nanti)
+- `SUPERADMIN_PASSWORD` → password awal Superadmin
+- `ADMIN_EMAIL` → email kontak admin
 
-**Untuk akses awal via IP**, biarkan field berikut **default**:
+Untuk akses awal via IP, biarkan default:
 ```
 SITE_ADDRESS=:80
 DOMAIN=
@@ -125,68 +130,62 @@ DOMAIN=
 
 ## 4. Build & Bring Up
 
-Script bootstrap aplikasi akan: build images, init DB, jalankan migrate + seed,
-buat superadmin, dan up semua service.
-
 ```bash
-cd /opt/rasmara/app
-sudo bash deploy/debian11/02-app-bootstrap.sh
+bash deploy/debian11/02-app-bootstrap.sh
 ```
 
-Tunggu sampai output: `[OK] RASMARA UP. Akses: http://<IP_VPS>`.
+Script akan:
+- Cek RAM & swap (peringatan kalau <2GB)
+- Buat folder `./data/...` & `./backups/`
+- Build images
+- Start postgres → migrate → seed → create_superadmin
+- Start full stack (default profile: postgres + backend + frontend + caddy)
 
-**Cek dari laptop Anda:**
-```bash
-curl -I http://<IP_VPS>/api/v1/health/    # harus 200 OK
+Tunggu output:
 ```
-Atau buka browser ke `http://<IP_VPS>`.
+[OK] RASMARA UP.
+Akses: http://<IP_VPS>     (mode IP / port 80, HTTP)
+```
+
+Cek RAM:
+```bash
+docker stats --no-stream
+free -h
+```
 
 ---
 
 ## 5. Login Pertama
 
-1. Akses `http://<IP_VPS>` di browser. Anda akan lihat halaman utama RASMARA.
-2. Klik **Masuk ke Sistem** atau buka langsung `http://<IP_VPS>/login`.
-3. Login pakai:
-   - Username: nilai `SUPERADMIN_USERNAME` di `.env.prod` (default: `superadmin`)
-   - Password: nilai `SUPERADMIN_PASSWORD` di `.env.prod`
-4. Sistem akan **memaksa Anda mengganti password** karena `must_change_password=true`.
-5. Setelah ganti password → masuk ke Dashboard.
+1. Buka `http://<IP_VPS>` di browser → halaman utama RASMARA.
+2. Klik **Masuk ke Sistem** atau buka `http://<IP_VPS>/login`.
+3. Login: `superadmin` + password dari `.env.prod`.
+4. Sistem paksa ganti password.
+5. Setelah ganti → masuk Dashboard.
 
 ---
 
 ## 6. Auto-Start saat Reboot (systemd)
 
-Pasang service systemd supaya stack aktif kembali setelah VPS reboot:
-
 ```bash
-cd /opt/rasmara/app
-sudo cp deploy/debian11/systemd/rasmara.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now rasmara.service
-sudo systemctl status rasmara.service
+sudo bash deploy/debian11/install-systemd.sh
+```
+
+Script akan render template `*.service.template` (mengganti `__REPO_DIR__` dan
+`__USER__` sesuai lokasi & user aktif), pasang ke `/etc/systemd/system/`,
+enable + start `rasmara.service` dan `rasmara-backup.timer` (jam 02:00 WIB harian).
+
+Cek:
+```bash
+systemctl status rasmara.service
+systemctl list-timers | grep rasmara
 ```
 
 ---
 
-## 7. Backup Otomatis Harian
+## 7. Aktifkan HTTPS dengan Domain
 
-```bash
-cd /opt/rasmara/app
-sudo cp deploy/debian11/systemd/rasmara-backup.service /etc/systemd/system/
-sudo cp deploy/debian11/systemd/rasmara-backup.timer /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now rasmara-backup.timer
-sudo systemctl list-timers | grep rasmara
-```
-
-Backup tersimpan di `/opt/rasmara/backups/`. Retention: 14 hari (script).
-
----
-
-## 8. Aktifkan HTTPS dengan Domain (Setelah Punya Domain)
-
-1. Pastikan DNS A-record `your-domain.tld` mengarah ke IP VPS dan sudah propagasi:
+1. DNS A record `your-domain.tld` → IP VPS, propagasi:
    ```bash
    dig +short your-domain.tld
    ```
@@ -195,63 +194,72 @@ Backup tersimpan di `/opt/rasmara/backups/`. Retention: 14 hari (script).
    DOMAIN=your-domain.tld
    SITE_ADDRESS=https://your-domain.tld
    DJANGO_ALLOWED_HOSTS=your-domain.tld
-   DJANGO_CSRF_TRUSTED_ORIGINS=https://your-domain.tld
    ```
 3. Restart Caddy:
    ```bash
    docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps caddy
    docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f caddy
    ```
-   Tunggu sampai log Caddy menunjukkan sertifikat berhasil di-issue.
 4. Akses `https://your-domain.tld` — padlock hijau.
 
 ---
 
-## 9. Update Aplikasi
-
-Saat ada rilis baru:
+## 8. Update Aplikasi
 
 ```bash
-cd /opt/rasmara/app
-git fetch origin
-git checkout <branch-or-tag>
-sudo bash deploy/debian11/03-update.sh
+bash deploy/debian11/03-update.sh
 ```
-
-Script akan: pull, build, migrate, restart service yang kena perubahan.
 
 ---
 
-## 10. Troubleshooting
+## 9. Aktifkan Profile Tambahan
+
+Stack default tidak menjalankan Redis/Celery/MinIO. Saat dibutuhkan:
+
+```bash
+# Tambah queue (Modul 9 — notifikasi & scheduler):
+PROFILES='--profile queue' bash deploy/debian11/02-app-bootstrap.sh
+
+# Tambah queue + s3:
+PROFILES='--profile queue --profile s3' bash deploy/debian11/02-app-bootstrap.sh
+```
+
+---
+
+## 10. Restore dari Backup
+
+```bash
+bash deploy/debian11/restore.sh ./backups/db_20260426_020000.sql.gz
+```
+
+---
+
+## 11. Troubleshooting
 
 | Masalah | Cek |
 |---|---|
-| `curl -I http://<IP>/api/v1/health/` connection refused | `docker compose ps`, port 80 tidak terbuka, ufw aktifkan: `sudo ufw allow 80/tcp` |
-| 502 Bad Gateway | `docker compose logs backend` — cek error startup Django |
-| Login gagal terus | Reset Superadmin: `make prod-createsuperadmin` (atau `--reset` flag) |
-| Lupa password Superadmin | `docker compose -f docker-compose.prod.yml run --rm backend python manage.py create_superadmin --reset` |
-| Disk penuh | `du -sh /opt/rasmara/data/*`, biasanya MinIO atau PostgreSQL WAL |
-| Email tidak terkirim | Cek tabel `notification_queue` (status FAILED + last_error). Test SMTP manual via mailpit lokal dulu untuk validasi env |
+| 502 Bad Gateway | `docker compose ps`, `docker compose logs backend` |
+| Sertifikat TLS gagal | DNS sudah propagasi? Port 80 terbuka? `docker compose logs caddy` |
+| OOM saat build | `free -h` — pastikan swap aktif. Pakai `make prod-up` (default profile) tanpa queue/s3 |
+| Login gagal | Reset Superadmin: `docker compose run --rm backend python manage.py create_superadmin --reset` |
+| Disk penuh | `du -sh ./data/* ./backups/*` |
 | Container tidak auto-up after reboot | `systemctl status rasmara.service` |
-| Sertifikat TLS gagal | Cek port 80 terbuka, DNS sudah propagasi, `docker compose logs caddy` |
 
 ---
 
-## 11. Checklist Go-Live
+## 12. Checklist Go-Live
 
-- [ ] DNS A-record (kalau pakai domain) sudah propagasi
-- [ ] SSH key-only login, root login disabled
-- [ ] UFW aktif (22, 80, 443 saja)
+- [ ] DNS A-record propagasi (kalau pakai domain)
+- [ ] SSH key-only login, root disabled
+- [ ] UFW aktif (22, 80, 443)
 - [ ] fail2ban aktif
-- [ ] Swap 4GB aktif
-- [ ] Timezone `Asia/Jakarta`
+- [ ] Swap 4GB
+- [ ] Timezone Asia/Jakarta
 - [ ] Docker + compose terinstall
-- [ ] `.env.prod` terisi penuh, password random
+- [ ] `.env.prod` random password
 - [ ] Aplikasi nyala via http://<IP>/
-- [ ] `/api/v1/health/ready/` return 200
-- [ ] Login Superadmin berhasil, bisa ganti password
-- [ ] Test SMTP kirim email reset password
-- [ ] Backup manual berhasil (`bash deploy/debian11/backup.sh`)
-- [ ] Restore di environment terpisah berhasil
-- [ ] Systemd service & backup timer aktif
-- [ ] Monitoring uptime ping berjalan (Uptime Kuma di server lain — opsional)
+- [ ] `/api/v1/health/ready/` 200
+- [ ] Login Superadmin berhasil
+- [ ] Test SMTP kirim email
+- [ ] `bash deploy/debian11/backup.sh` berhasil
+- [ ] `systemctl status rasmara.service` aktif

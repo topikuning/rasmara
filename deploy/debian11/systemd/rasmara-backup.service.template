@@ -5,6 +5,6 @@ After=docker.service rasmara.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/rasmara/app
-ExecStart=/bin/bash /opt/rasmara/app/deploy/debian11/backup.sh
-User=rasmara
+WorkingDirectory=__REPO_DIR__
+ExecStart=/bin/bash __REPO_DIR__/deploy/debian11/backup.sh
+User=__USER__

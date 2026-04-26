@@ -41,7 +41,7 @@ services:
       -c min_wal_size=80MB
       -c max_wal_size=512MB
     volumes:
-      - /opt/rasmara/data/postgres:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
@@ -62,8 +62,8 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: rasmara.settings.prod
     volumes:
-      - /opt/rasmara/data/backend-static:/app/staticfiles
-      - /opt/rasmara/data/backend-media:/app/media
+      - ./data/backend-static:/app/staticfiles
+      - ./data/backend-media:/app/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,8 +108,8 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@rasmara.local}
     volumes:
       - ./deploy/debian11/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - /opt/rasmara/data/caddy:/data
-      - /opt/rasmara/data/caddy-config:/config
+      - ./data/caddy:/data
+      - ./data/caddy-config:/config
     depends_on:
       - backend
       - frontend
@@ -147,7 +147,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: rasmara.settings.prod
     volumes:
-      - /opt/rasmara/data/backend-media:/app/media
+      - ./data/backend-media:/app/media
     depends_on:
       - backend
       - redis
@@ -186,7 +186,7 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     volumes:
-      - /opt/rasmara/data/minio:/data
+      - ./data/minio:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 30s
