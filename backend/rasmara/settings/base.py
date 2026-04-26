@@ -43,6 +43,7 @@ LOCAL_APPS = [
     "apps.core",
     "apps.master",
     "apps.contract",
+    "apps.change",  # stub utk Modul 5 — BOQRevision FK ke Addendum (Bagian 3.4 + 5.2)
     "apps.boq",
 ]
 
