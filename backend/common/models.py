@@ -58,8 +58,17 @@ class SoftDeleteQuerySet(models.QuerySet):
         return self.update(deleted_at=timezone.now())
 
 
-class SoftDeleteManager(models.Manager):
-    """Default manager filter deleted_at IS NULL (Inv. 12)."""
+# Manager class yang auto-proxy method dari SoftDeleteQuerySet, sehingga
+# `Model.objects.alive()` DAN `parent.related_set.alive()` keduanya bekerja.
+_SoftDeleteManagerBase = models.Manager.from_queryset(SoftDeleteQuerySet)
+
+
+class SoftDeleteManager(_SoftDeleteManagerBase):
+    """Default manager filter deleted_at IS NULL (Inv. 12).
+
+    Menggunakan from_queryset(SoftDeleteQuerySet) sehingga method alive/dead
+    otomatis tersedia di RelatedManager (mis. `contract.locations.alive()`).
+    """
 
     use_in_migrations = True
 
@@ -68,7 +77,7 @@ class SoftDeleteManager(models.Manager):
         self._include_deleted = include_deleted
 
     def get_queryset(self) -> SoftDeleteQuerySet:
-        qs = SoftDeleteQuerySet(self.model, using=self._db)
+        qs = super().get_queryset()
         if not self._include_deleted:
             qs = qs.filter(deleted_at__isnull=True)
         return qs
