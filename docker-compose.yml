@@ -83,7 +83,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: python manage.py runserver 0.0.0.0:8000
+    # Dev: auto makemigrations + migrate dulu, baru runserver.
+    # Untuk prod gunakan docker-compose.prod.yml (gunicorn + migrate manual via script).
+    command: >
+      bash -c "
+      python manage.py makemigrations --noinput &&
+      python manage.py migrate --noinput &&
+      python manage.py runserver 0.0.0.0:8000
+      "
     ports:
       - "${HOST_PORT_BACKEND:-8000}:8000"
 

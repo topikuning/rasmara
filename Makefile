@@ -95,6 +95,15 @@ fmt:
 clean-dev:
 	$(COMPOSE_DEV) down -v
 
+reset-migrations:
+	@echo "Hapus semua migration files (kecuali __init__.py) di apps/*/migrations/"
+	find backend/apps -path '*/migrations/*.py' -not -name '__init__.py' -delete
+	find backend/apps -path '*/migrations/__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+	@echo "Selesai. Jalankan: make down && make up (auto-migrate akan generate ulang)"
+
+reset-all: clean-dev reset-migrations
+	@echo "Stack dev di-reset total. Jalankan: make up && make seed && make createsuperadmin"
+
 # ---- PROD (Debian 11 VPS) ----
 prod-up:
 	$(COMPOSE_PROD) up -d
