@@ -287,7 +287,9 @@ export default function ImportBoqPage({ params }: { params: Promise<{ id: string
   );
 }
 
-function Step({ n, active, done, children }: any) {
+function Step({ n, active, done, children }: {
+  n: number; active: boolean; done: boolean; children: React.ReactNode;
+}) {
   return (
     <li className={`flex items-center gap-1.5 ${active ? "text-primary font-semibold"
                                                        : done ? "text-success" : "text-muted-fg"}`}>

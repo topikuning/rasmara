@@ -136,11 +136,25 @@ export default function LokasiPage({ params }: { params: Promise<{ id: string }>
   );
 }
 
+type LocationCardProps = {
+  location: Location;
+  canEdit: boolean;
+  canDelete: boolean;
+  canCreateFacility: boolean;
+  canEditFacility: boolean;
+  canDeleteFacility: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAddFacility: () => void;
+  onEditFacility: (fac: Facility) => void;
+  onDeleteFacility: (fac: Facility) => void;
+};
+
 function LocationCard({
   location, canEdit, canDelete, canCreateFacility,
   canEditFacility, canDeleteFacility,
   onEdit, onDelete, onAddFacility, onEditFacility, onDeleteFacility,
-}: any) {
+}: LocationCardProps) {
   const [open, setOpen] = useState(true);
   const loc: Location = location;
 
