@@ -58,31 +58,45 @@ make createsuperadmin
 
 Manual lengkap step-by-step ada di [`deploy/debian11/README.md`](./deploy/debian11/README.md).
 
-Ringkasan **akses awal via IP di port 80** (tanpa domain):
+### Profil Stack (sesuaikan dengan ukuran VPS)
+
+Stack default dirancang untuk **VPS 1 vCPU + 2 GB RAM**.
+
+| Profil | Service aktif | RAM idle ± | Cocok utk |
+|---|---|---|---|
+| default (tanpa flag) | postgres + backend + frontend + caddy | ~600 MB | Modul 1–4, VPS minimal |
+| `--profile queue` | + redis + celery-worker + celery-beat | + ~250 MB | Saat Modul 9 (notifikasi/scheduler) aktif |
+| `--profile s3` | + minio | + ~200 MB | Volume foto besar (storage S3) |
+
+### VPS 1 vCPU + 2 GB RAM
 
 ```bash
-# Di VPS sebagai user 'rasmara' (sudah dibuat oleh script bootstrap)
 cd /opt/rasmara/app
 cp .env.example .env.prod
-nano .env.prod                # isi POSTGRES_PASSWORD, MINIO password, dll.
-                              # SITE_ADDRESS biarkan ":80" (default)
-                              # DOMAIN biarkan kosong
+nano .env.prod                # ganti password & secret. SITE_ADDRESS biarkan ":80".
 
-make prod-build
-make prod-migrate
-make prod-seed
-make prod-createsuperadmin
-make prod-up
-
+bash deploy/debian11/02-app-bootstrap.sh
 # Akses: http://<IP_VPS_ANDA>
 ```
 
-Untuk aktifkan HTTPS+domain: edit `.env.prod`:
+Cek konsumsi resource real-time:
+```bash
+make prod-stats               # docker stats + free -h
+```
+
+### Mengaktifkan profil tambahan saat dibutuhkan
+```bash
+make prod-up-queue            # default + queue (Modul 9)
+make prod-up-full             # default + queue + s3
+```
+
+### Aktifkan HTTPS + domain
+Edit `.env.prod`:
 ```
 DOMAIN=rasmara.example.go.id
 SITE_ADDRESS=https://rasmara.example.go.id
 ```
-lalu `make prod-up` ulang. Caddy akan auto-fetch sertifikat Let's Encrypt.
+lalu `make prod-up`. Caddy auto-fetch sertifikat Let's Encrypt.
 
 ---
 

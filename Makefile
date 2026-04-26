@@ -1,6 +1,9 @@
 SHELL := /bin/bash
 COMPOSE_DEV ?= docker compose -f docker-compose.yml --env-file .env
-COMPOSE_PROD ?= docker compose -f docker-compose.prod.yml --env-file .env.prod
+# PROD_PROFILES kosong = stack default (postgres + backend + frontend + caddy).
+# Aktifkan profil: PROD_PROFILES="--profile queue" make prod-up
+PROD_PROFILES ?=
+COMPOSE_PROD ?= docker compose -f docker-compose.prod.yml $(PROD_PROFILES) --env-file .env.prod
 
 .PHONY: help setup up down restart logs ps build rebuild migrate makemigrations \
         seed createsuperadmin shell-backend shell-frontend dbshell test lint \
@@ -107,10 +110,27 @@ reset-all: clean-dev reset-migrations
 # ---- PROD (Debian 11 VPS) ----
 prod-up:
 	$(COMPOSE_PROD) up -d
-	@echo "Stack prod up. Akses via http://<IP_VPS> (port 80) atau https://<DOMAIN> jika sudah di-set."
+	@echo ""
+	@echo "Stack prod up. Profiles aktif: '$(PROD_PROFILES)'"
+	@echo "Akses via http://<IP_VPS> (port 80) atau https://<DOMAIN> jika sudah di-set."
+
+prod-stats:
+	@echo "=== Container resource usage ==="
+	@docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+	@echo ""
+	@echo "=== Memory & swap ==="
+	@free -h
+
+prod-up-queue:
+	docker compose -f docker-compose.prod.yml --profile queue --env-file .env.prod up -d
+	@echo "Stack prod + queue (Redis + Celery worker + Celery beat) up."
+
+prod-up-full:
+	docker compose -f docker-compose.prod.yml --profile queue --profile s3 --env-file .env.prod up -d
+	@echo "Stack prod + queue + s3 (MinIO) up."
 
 prod-down:
-	$(COMPOSE_PROD) down
+	docker compose -f docker-compose.prod.yml --profile queue --profile s3 --env-file .env.prod down
 
 prod-logs:
 	$(COMPOSE_PROD) logs -f --tail=200

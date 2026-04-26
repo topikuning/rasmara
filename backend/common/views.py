@@ -16,7 +16,12 @@ class HealthView(APIView):
 
 
 class ReadyView(APIView):
-    """GET /api/v1/health/ready/  -> cek koneksi DB & Redis."""
+    """GET /api/v1/health/ready/  -> cek koneksi DB (wajib) & Redis (opsional).
+
+    Redis hanya diperlukan saat profile=queue aktif (Celery). Stack default
+    (Modul 1-4) tidak butuh Redis, jadi kegagalan ping Redis tidak menggagalkan
+    health check.
+    """
 
     permission_classes = (permissions.AllowAny,)
 
@@ -24,7 +29,7 @@ class ReadyView(APIView):
         results: dict[str, str] = {}
         ok = True
 
-        # DB
+        # DB - WAJIB
         try:
             with connection.cursor() as cur:
                 cur.execute("SELECT 1")
@@ -34,16 +39,22 @@ class ReadyView(APIView):
             ok = False
             results["database"] = f"fail: {e}"
 
-        # Redis (via celery broker)
-        try:
-            import redis
+        # Redis - OPSIONAL (hanya cek kalau QUEUE_ENABLED=true di env)
+        from rasmara.settings.env import env_bool
+        if env_bool("QUEUE_ENABLED", default=False):
+            try:
+                import redis
 
-            r = redis.Redis.from_url(settings.CELERY_BROKER_URL)
-            r.ping()
-            results["redis"] = "ok"
-        except Exception as e:  # noqa: BLE001
-            ok = False
-            results["redis"] = f"fail: {e}"
+                r = redis.Redis.from_url(settings.CELERY_BROKER_URL,
+                                          socket_connect_timeout=2,
+                                          socket_timeout=2)
+                r.ping()
+                results["redis"] = "ok"
+            except Exception as e:  # noqa: BLE001
+                ok = False
+                results["redis"] = f"fail: {e}"
+        else:
+            results["redis"] = "disabled"
 
         return Response(
             {"status": "ok" if ok else "degraded", "checks": results},
