@@ -25,20 +25,26 @@
 		}
 	}
 
-	# Django admin (opsional, untuk debug)
+	# Django admin (opsional, untuk debug) — proxy ke backend
 	handle /django-admin/* {
 		reverse_proxy backend:8000
 	}
 
-	# Static files Django (admin, DRF browsable API)
-	handle /static/* {
-		reverse_proxy backend:8000
+	# Static files Django (admin, DRF browsable API) — Caddy serve langsung
+	# dari filesystem (lebih cepat, hemat RAM gunicorn). Volume di-mount
+	# ke /srv/static (read-only) di docker-compose.
+	handle_path /static/* {
+		root * /srv/static
+		file_server
 	}
 
-	# Media files (foto laporan, dokumen kontrak) — disajikan langsung dari MinIO
-	# saat sudah pakai presigned URL; sementara via Django.
-	handle /media/* {
-		reverse_proxy backend:8000
+	# Media files (foto laporan, dokumen kontrak) — Caddy serve langsung
+	# dari filesystem. Volume di-mount ke /srv/media (read-only).
+	# Saat MinIO/S3 aktif, frontend pakai presigned URL — handler ini
+	# tidak terpakai.
+	handle_path /media/* {
+		root * /srv/media
+		file_server
 	}
 
 	# ----- Frontend (Next.js) — semua sisanya -----

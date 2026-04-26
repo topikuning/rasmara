@@ -110,6 +110,9 @@ services:
       - ./deploy/debian11/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./data/caddy:/data
       - ./data/caddy-config:/config
+      # Static & media files — Caddy serve langsung dari filesystem
+      - ./data/backend-static:/srv/static:ro
+      - ./data/backend-media:/srv/media:ro
     depends_on:
       - backend
       - frontend
