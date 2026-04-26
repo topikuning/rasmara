@@ -6,6 +6,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Aliases pendek (dipakai class seperti text-fg, bg-bg)
+        bg: "rgb(var(--bg) / <alpha-value>)",
+        fg: "rgb(var(--fg) / <alpha-value>)",
+        // Nama panjang (dipakai juga oleh body className)
         background: "rgb(var(--bg) / <alpha-value>)",
         foreground: "rgb(var(--fg) / <alpha-value>)",
         muted: "rgb(var(--muted) / <alpha-value>)",
