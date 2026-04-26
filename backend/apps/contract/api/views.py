@@ -82,9 +82,9 @@ class ContractViewSet(viewsets.ModelViewSet):
         return ContractDetailSerializer
 
     def perform_create(self, serializer):
+        # current_value sudah di-set = original_value di serializer.validate()
         contract = serializer.save(
             created_by=self.request.user, updated_by=self.request.user,
-            current_value=serializer.validated_data.get("original_value"),
         )
         recalc_duration(contract)
         contract.save(update_fields=["duration_days", "updated_at"])

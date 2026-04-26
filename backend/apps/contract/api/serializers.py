@@ -110,7 +110,19 @@ class ContractDetailSerializer(serializers.ModelSerializer):
                              "status_display", "boq_pre_ppn_value", "ppn_amount",
                              "is_godmode_active",
                              "duration_days",
+                             # status hanya boleh diubah lewat endpoint state-action
+                             "status",
                              "created_at", "updated_at"]
+        extra_kwargs = {
+            # current_value otomatis di-set saat create (mirror original_value).
+            # Saat update boleh diisi manual (mis. koreksi nilai pasca-addendum).
+            "current_value": {"required": False},
+            "ppn_pct": {"required": False},
+            "notes": {"required": False, "allow_blank": True},
+            "document": {"required": False, "allow_null": True},
+            "unlock_until": {"required": False, "allow_null": True},
+            "unlock_reason": {"required": False, "allow_blank": True},
+        }
 
     def get_boq_pre_ppn_value(self, obj: Contract) -> str:
         return str(obj.boq_pre_ppn_value)
@@ -126,10 +138,9 @@ class ContractDetailSerializer(serializers.ModelSerializer):
                 {"end_date": "Tanggal selesai tidak boleh sebelum tanggal mulai."}
             )
 
-        # current_value tidak boleh diisi manual saat create — selalu mirror original_value
+        # Saat create: current_value selalu mirror original_value (tidak boleh dispoof oleh klien).
         if self.instance is None:
-            if "current_value" in attrs:
-                attrs["current_value"] = attrs.get("original_value", attrs["current_value"])
+            attrs["current_value"] = attrs.get("original_value")
         return attrs
 
 
