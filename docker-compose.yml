@@ -13,7 +13,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${HOST_PORT_POSTGRES:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rasmara}"]
       interval: 5s
@@ -24,7 +24,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${HOST_PORT_REDIS:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -41,8 +41,8 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${HOST_PORT_MINIO_API:-9000}:9000"
+      - "${HOST_PORT_MINIO_CONSOLE:-9001}:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 10s
@@ -66,8 +66,8 @@ services:
     image: axllent/mailpit:latest
     restart: unless-stopped
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "${HOST_PORT_MAILPIT_SMTP:-1025}:1025"
+      - "${HOST_PORT_MAILPIT_UI:-8025}:8025"
 
   backend:
     build:
@@ -85,7 +85,7 @@ services:
         condition: service_healthy
     command: python manage.py runserver 0.0.0.0:8000
     ports:
-      - "8000:8000"
+      - "${HOST_PORT_BACKEND:-8000}:8000"
 
   celery-worker:
     build:
@@ -131,7 +131,7 @@ services:
       - backend
     command: npm run dev
     ports:
-      - "3000:3000"
+      - "${HOST_PORT_FRONTEND:-3000}:3000"
 
   caddy:
     image: caddy:2-alpine
@@ -147,8 +147,8 @@ services:
       - backend
       - frontend
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HOST_PORT_HTTP:-80}:80"
+      - "${HOST_PORT_HTTPS:-443}:443"
 
 volumes:
   postgres_data:
