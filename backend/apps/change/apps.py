@@ -5,10 +5,13 @@ class ChangeConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.change"
     label = "change"
-    verbose_name = "Change Management (VO & Addendum)"
+    verbose_name = "Change Management (VO & Addendum & Field Observation)"
 
     def ready(self) -> None:
         from apps.core import signals as core_signals
         from . import models as m
 
-        core_signals.AUDITED_MODELS.update({m.Addendum})
+        core_signals.AUDITED_MODELS.update({
+            m.VariationOrder, m.VOItem, m.Addendum,
+            m.FieldObservation,
+        })

@@ -9,6 +9,7 @@ const TABS = [
   { key: "ringkasan", label: "Ringkasan" },
   { key: "lokasi", label: "Lokasi & Fasilitas" },
   { key: "boq", label: "BOQ" },
+  { key: "mc", label: "MC (Field Obs)" },
   { key: "vo", label: "VO" },
   { key: "addendum", label: "Addendum" },
   { key: "laporan-mingguan", label: "Laporan" },

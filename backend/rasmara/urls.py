@@ -15,6 +15,7 @@ api_v1_patterns = [
     path("", include("apps.master.api.urls")),
     path("", include("apps.contract.api.urls")),
     path("", include("apps.boq.api.urls")),
+    path("", include("apps.change.api.urls")),
 ]
 
 urlpatterns = [
