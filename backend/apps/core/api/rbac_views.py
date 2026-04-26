@@ -7,6 +7,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from common.security import generate_password
+
 from ..models import AuditLog, Menu, Permission, Role
 from ..permissions import HasPermissionCode, IsSuperuser
 from .serializers import (
@@ -157,7 +159,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="reset-password")
     def reset_password(self, request, pk=None):
         user = self.get_object()
-        new_pwd = User.objects.make_random_password(length=10)
+        new_pwd = generate_password(length=12)
         user.set_password(new_pwd)
         user.must_change_password = True
         user.save(update_fields=["password", "must_change_password", "updated_at"])

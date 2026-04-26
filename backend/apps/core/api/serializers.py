@@ -3,6 +3,8 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from common.security import generate_password
+
 from ..models import AuditLog, Menu, Permission, Role, User
 
 
@@ -104,7 +106,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data: dict):
-        password = validated_data.pop("password", None) or User.objects.make_random_password()
+        password = validated_data.pop("password", None) or generate_password()
         user = User(**validated_data, must_change_password=True)
         user.set_password(password)
         user.save()

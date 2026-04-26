@@ -1,22 +1,16 @@
 """Service master data: auto-provisioning user (Inv. 15)."""
 import re
-import secrets
-import string
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from apps.core.models import Role
+from common.security import generate_password
+
+# Backward-compat alias (saat dipakai di views.py)
+_generate_password = generate_password
 
 User = get_user_model()
-
-
-def _generate_password(length: int = 12) -> str:
-    """Generate password random alphanumeric + punct (tanpa karakter ambigu)."""
-    alphabet = string.ascii_letters + string.digits + "!@#$%&*"
-    # hindari I, l, 1, O, 0
-    alphabet = alphabet.translate(str.maketrans("", "", "Il1O0"))
-    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 def _slugify_username(base: str) -> str:
