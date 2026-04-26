@@ -23,23 +23,44 @@ export class ApiError extends Error {
   }
 }
 
-type FetchOpts = RequestInit & { body?: any; auth?: boolean };
+// Body bisa berupa:
+//   - object (akan di-JSON.stringify),
+//   - FormData (untuk upload file, header Content-Type otomatis),
+//   - string (kirim apa adanya),
+//   - null / undefined (no body).
+// Kita pakai Omit<RequestInit, 'body'> supaya TS tidak menahan kita ke
+// BodyInit dari fetch native — kita handle serialisasi sendiri di rawFetch.
+type FetchOpts = Omit<RequestInit, "body"> & {
+  body?: unknown;
+  auth?: boolean;
+};
 
 async function rawFetch(path: string, opts: FetchOpts = {}, token?: string | null): Promise<Response> {
   const url = path.startsWith("http") ? path : `${BASE}${path}`;
   const headers = new Headers(opts.headers as HeadersInit);
-  if (!(opts.body instanceof FormData) && opts.body !== undefined && !headers.has("Content-Type")) {
+  const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  if (!isFormData && opts.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
   if (token && opts.auth !== false) headers.set("Authorization", `Bearer ${token}`);
 
+  // Pisahkan body custom dari opts sebelum spread ke RequestInit
+  const { body, auth: _auth, ...restOpts } = opts;
+  let nativeBody: BodyInit | null | undefined;
+  if (body === undefined || body === null) {
+    nativeBody = undefined;
+  } else if (isFormData || typeof body === "string" || body instanceof Blob
+              || body instanceof ArrayBuffer || body instanceof URLSearchParams) {
+    nativeBody = body as BodyInit;
+  } else {
+    nativeBody = JSON.stringify(body);
+  }
+
   return fetch(url, {
-    ...opts,
+    ...restOpts,
     headers,
-    body: opts.body instanceof FormData ? opts.body
-        : opts.body !== undefined ? JSON.stringify(opts.body)
-        : undefined,
+    body: nativeBody,
     cache: "no-store",
     credentials: "include",
   });
