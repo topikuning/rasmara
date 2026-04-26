@@ -66,6 +66,7 @@ export default function RolesPage() {
           )}
           {selected && (
             <RolePermissionEditor
+              key={selected.id}
               role={selected}
               perms={perms ?? []}
               canUpdate={canUpdate}
@@ -81,15 +82,10 @@ export default function RolesPage() {
 function RolePermissionEditor({
   role, perms, canUpdate, onSaved,
 }: { role: Role; perms: Permission[]; canUpdate: boolean; onSaved: () => void }) {
+  // State di-init sekali per mount. Saat user pilih role lain, parent pasang
+  // key={role.id} sehingga komponen ini remount otomatis dengan state segar.
   const [selected, setSelected] = useState<Set<string>>(new Set(role.permission_codes));
   const [saving, setSaving] = useState(false);
-
-  // Re-init when role berubah
-  if ((role.permission_codes.length !== selected.size
-       || role.permission_codes.some((c) => !selected.has(c)))
-      && JSON.stringify([...selected].sort()) !== JSON.stringify([...role.permission_codes].sort())) {
-    // hanya reset kalau memang beda set (ringan)
-  }
 
   function toggle(code: string) {
     if (!canUpdate) return;
