@@ -13,6 +13,7 @@ api_v1_patterns = [
     path("auth/", include("apps.core.urls.auth")),
     path("", include("apps.core.urls.rbac")),
     path("", include("apps.master.api.urls")),
+    path("", include("apps.contract.api.urls")),
 ]
 
 urlpatterns = [
