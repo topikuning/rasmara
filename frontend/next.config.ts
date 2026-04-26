@@ -6,6 +6,16 @@ const nextConfig: NextConfig = {
 
   reactStrictMode: true,
 
+  // ESLint warning/cosmetic tidak boleh menggagalkan production build di VPS.
+  // Tetap jalan via 'npm run lint' utk dev — hanya skip saat build.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // TypeScript error TETAP fail build (indikator bug nyata, bukan kosmetik).
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+
   // Re-write /api/* ke backend untuk dev tanpa Caddy.
   // Saat di prod (Caddy ada), Caddy yang pegang routing /api/*.
   // Re-write ini hanya aktif kalau NEXT_PUBLIC_API_BASE_URL kosong (mode dev).

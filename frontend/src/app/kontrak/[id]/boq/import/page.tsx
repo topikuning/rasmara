@@ -156,7 +156,7 @@ export default function ImportBoqPage({ params }: { params: Promise<{ id: string
           <div className="rounded-lg border bg-muted/20 p-4">
             <p className="text-sm font-medium mb-1">Belum punya template?</p>
             <p className="text-xs text-muted-fg mb-2">
-              Unduh template Format A — sheet "BOQ" dengan header siap pakai dan baris contoh.
+              Unduh template Format A — sheet &ldquo;BOQ&rdquo; dengan header siap pakai dan baris contoh.
             </p>
             <button
               type="button"
