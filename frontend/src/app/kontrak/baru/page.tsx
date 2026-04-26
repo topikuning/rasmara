@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api, ApiError } from "@/lib/api/client";
@@ -14,6 +14,7 @@ export default function BuatKontrakPage() {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const [submitting, setSubmitting] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [form, setForm] = useState({
     number: "",
     name: "",
@@ -39,26 +40,39 @@ export default function BuatKontrakPage() {
         method: "POST",
         body: form,
       });
-      toast.success("Kontrak dibuat. Status: DRAFT.");
+      // Status: navigating - tetap blok form sampai halaman tujuan render.
+      setNavigating(true);
+      toast.success("Kontrak dibuat. Membuka detail...");
       router.replace(`/kontrak/${res.id}/ringkasan`);
+      // sengaja tidak setSubmitting(false) — overlay tetap tampil sampai unmount.
     } catch (err) {
+      setSubmitting(false);
       if (err instanceof ApiError) {
         const detail = err.details ? "\n" + JSON.stringify(err.details) : "";
         toast.error(`${err.message}${detail}`);
       }
-    } finally {
-      setSubmitting(false);
     }
   }
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="max-w-3xl space-y-4 relative">
+      {navigating && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-background/80 backdrop-blur-sm">
+          <div className="card p-6 text-center max-w-sm">
+            <Loader2 className="size-10 animate-spin mx-auto mb-3 text-primary" />
+            <p className="font-medium">Membuka detail kontrak...</p>
+            <p className="text-xs text-muted-fg mt-1">Tunggu sebentar.</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-3">
         <Link href="/kontrak" className="btn-ghost p-1.5"><ArrowLeft className="size-4" /></Link>
         <h1 className="text-2xl font-bold">Buat Kontrak Baru</h1>
       </div>
 
       <form onSubmit={onSubmit} className="card p-6 space-y-4">
+        <fieldset disabled={submitting} className="contents">
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Nomor Kontrak <span className="text-danger">*</span></label>
@@ -159,9 +173,15 @@ export default function BuatKontrakPage() {
         <div className="flex gap-2 pt-2 border-t">
           <Link href="/kontrak" className="btn-secondary flex-1 text-center">Batal</Link>
           <button type="submit" className="btn-primary flex-1" disabled={submitting}>
-            {submitting ? "Menyimpan..." : "Simpan Kontrak"}
+            {submitting ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                {navigating ? "Membuka detail..." : "Menyimpan..."}
+              </span>
+            ) : "Simpan Kontrak"}
           </button>
         </div>
+        </fieldset>
       </form>
     </div>
   );

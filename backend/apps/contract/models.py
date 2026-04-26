@@ -99,10 +99,18 @@ class Contract(SoftDeleteModel):
     # ----- helpers nilai (Bagian 7) -----
     @property
     def boq_pre_ppn_value(self) -> Decimal:
-        """Sum nilai item BOQ leaf (PRE-PPN) di revisi aktif. Dihitung saat
-        modul BOQ aktif. Untuk sementara return Decimal('0')."""
-        # Akan di-implementasi saat modul 4 (BOQ).
-        return Decimal("0.00")
+        """Sum nilai item BOQ leaf (PRE-PPN) di revisi aktif."""
+        try:
+            from apps.boq.models import BOQItem
+            from django.db.models import Sum
+            agg = BOQItem.objects.filter(
+                boq_revision__contract=self,
+                boq_revision__is_active=True,
+                is_leaf=True,
+            ).aggregate(total=Sum("total_price"))
+            return (agg["total"] or Decimal("0.00")).quantize(Decimal("0.01"))
+        except (ImportError, LookupError):
+            return Decimal("0.00")
 
     @property
     def ppn_amount(self) -> Decimal:
