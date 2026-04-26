@@ -2,13 +2,16 @@
 
 import { use, useState } from "react";
 import useSWR from "swr";
+import Link from "next/link";
 import {
   Plus, RefreshCw, ChevronDown, ChevronRight, Edit2, Trash2,
   CheckCircle2, AlertTriangle, Calculator, ShieldCheck,
+  FileSpreadsheet, FileText, Upload, GitCompareArrows,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api, ApiError, swrFetcher } from "@/lib/api/client";
+import { downloadFile } from "@/lib/api/download";
 import { useAuthStore } from "@/lib/auth/store";
 import { formatRupiahFull, formatNumber, formatPercent } from "@/lib/format/rupiah";
 import FilterableSelect from "@/components/form/FilterableSelect";
@@ -210,6 +213,37 @@ export default function BoqPage({ params }: { params: Promise<{ id: string }> })
         <button onClick={onValidateBudget} className="btn-secondary" disabled={busy}>
           <CheckCircle2 className="size-4 mr-1" /> Cek Anggaran
         </button>
+        {canEdit && hasPerm("boq.import") && (
+          <Link href={`/kontrak/${contractId}/boq/import?revision=${currentRev?.id}`}
+                className="btn-secondary">
+            <Upload className="size-4 mr-1" /> Import Excel
+          </Link>
+        )}
+        {currentRev && (
+          <button
+            onClick={() => downloadFile(`/boq-revisions/${currentRev.id}/export-xlsx/`,
+                                          `BOQ-V${currentRev.version}.xlsx`)
+                            .catch((e) => toast.error(e.message))}
+            className="btn-secondary"
+          >
+            <FileSpreadsheet className="size-4 mr-1" /> Unduh Excel
+          </button>
+        )}
+        {currentRev && (
+          <button
+            onClick={() => downloadFile(`/boq-revisions/${currentRev.id}/export-pdf/`,
+                                          `BOQ-V${currentRev.version}.pdf`)
+                            .catch((e) => toast.error(e.message))}
+            className="btn-secondary"
+          >
+            <FileText className="size-4 mr-1" /> Unduh PDF
+          </button>
+        )}
+        {revisions.length >= 2 && (
+          <Link href={`/kontrak/${contractId}/boq/komparasi`} className="btn-secondary">
+            <GitCompareArrows className="size-4 mr-1" /> Komparasi Revisi
+          </Link>
+        )}
         {canEdit && hasPerm("boq.approve") && currentRev?.status === "DRAFT" && (
           <button onClick={onApprove} className="btn-primary" disabled={busy}>
             <ShieldCheck className="size-4 mr-1" /> Approve V{currentRev.version}

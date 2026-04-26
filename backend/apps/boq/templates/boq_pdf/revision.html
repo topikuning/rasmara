@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>BOQ {{ contract.number }} V{{ revision.version }}</title>
+<style>
+  @page {
+    size: A4 landscape;
+    margin: 1.5cm 1cm 1.8cm 1cm;
+    @top-center {
+      content: "{{ contract.number }} - BOQ V{{ revision.version }} ({{ revision.status_display }})";
+      font-family: 'DejaVu Sans', sans-serif;
+      font-size: 8pt; color: #666;
+    }
+    @bottom-right {
+      content: "Halaman " counter(page) " dari " counter(pages);
+      font-family: 'DejaVu Sans', sans-serif;
+      font-size: 8pt; color: #666;
+    }
+    @bottom-left {
+      content: "Dicetak: {{ printed_at }}";
+      font-family: 'DejaVu Sans', sans-serif;
+      font-size: 8pt; color: #666;
+    }
+  }
+  body {
+    font-family: 'DejaVu Sans', 'Liberation Sans', sans-serif;
+    font-size: 8.5pt; color: #111; margin: 0;
+  }
+  h1 { font-size: 14pt; text-align: center; margin: 0 0 4px; }
+  h2 { font-size: 10pt; text-align: center; margin: 0 0 12px; color: #555; font-weight: normal; }
+  .info {
+    width: 100%; border-collapse: collapse; margin-bottom: 10px;
+  }
+  .info td {
+    padding: 2px 6px; vertical-align: top; font-size: 8.5pt;
+  }
+  .info td.label { color: #555; width: 14%; }
+  .info td.value { font-weight: 600; width: 36%; }
+  table.boq {
+    width: 100%; border-collapse: collapse; font-size: 7.5pt;
+  }
+  table.boq thead {
+    display: table-header-group;
+  }
+  table.boq th {
+    background: #1F4E78; color: white; font-weight: 700;
+    padding: 4px 6px; text-align: center;
+    border: 0.5pt solid #444;
+  }
+  table.boq td {
+    padding: 3px 6px; vertical-align: top;
+    border: 0.5pt solid #BBB;
+  }
+  table.boq tr.parent td {
+    background: #EFEFEF; font-weight: 600;
+  }
+  table.boq tr {
+    page-break-inside: avoid;
+  }
+  td.r { text-align: right; font-family: 'DejaVu Sans Mono', monospace; }
+  td.c { text-align: center; }
+  td.code { font-family: 'DejaVu Sans Mono', monospace; font-size: 7pt; }
+  td.indent-1 { padding-left: 14px; }
+  td.indent-2 { padding-left: 28px; }
+  td.indent-3 { padding-left: 42px; }
+  tfoot td {
+    background: #FFE9C7; font-weight: 700;
+    border: 0.5pt solid #444;
+  }
+  tfoot tr.grand td {
+    background: #1F4E78; color: white;
+  }
+  .signature {
+    margin-top: 30px; width: 100%;
+  }
+  .signature td {
+    width: 33%; vertical-align: top; padding: 0 10px;
+    text-align: center; font-size: 8.5pt;
+  }
+  .signature .nm { margin-top: 60px; font-weight: 600; border-top: 0.5pt solid #000;
+                   padding-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>BILL OF QUANTITY (BOQ)</h1>
+<h2>Revisi V{{ revision.version }} - {{ revision.status_display }}{% if revision.is_active %} (aktif){% endif %}</h2>
+
+<table class="info">
+  <tr>
+    <td class="label">Nomor Kontrak</td><td class="value">{{ contract.number }}</td>
+    <td class="label">Tahun Anggaran</td><td class="value">{{ contract.fiscal_year }}</td>
+  </tr>
+  <tr>
+    <td class="label">Nama Kontrak</td><td class="value" colspan="3">{{ contract.name }}</td>
+  </tr>
+  <tr>
+    <td class="label">PPK</td><td class="value">{{ ppk_name }}</td>
+    <td class="label">Kontraktor</td><td class="value">{{ contractor_name }}</td>
+  </tr>
+  <tr>
+    <td class="label">Periode</td><td class="value">{{ start_date }} s.d. {{ end_date }}</td>
+    <td class="label">PPN</td><td class="value">{{ ppn_pct }}%</td>
+  </tr>
+</table>
+
+<table class="boq">
+  <thead>
+    <tr>
+      <th style="width:8%">Kode</th>
+      <th style="width:30%">Uraian Pekerjaan</th>
+      <th style="width:12%">Fasilitas</th>
+      <th style="width:5%">Sat.</th>
+      <th style="width:8%">Volume</th>
+      <th style="width:13%">Harga Sat. (PRE-PPN)</th>
+      <th style="width:14%">Jumlah</th>
+      <th style="width:6%">Bobot %</th>
+      <th style="width:4%">Lvl</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in items %}
+    <tr class="{% if not it.is_leaf %}parent{% endif %}">
+      <td class="code">{{ it.full_code|default:it.code }}</td>
+      <td class="indent-{{ it.level }}">{{ it.description }}</td>
+      <td>{{ it.facility.code }}</td>
+      <td class="c">{{ it.unit }}</td>
+      <td class="r">{% if it.is_leaf %}{{ it.volume|fmt_num:4 }}{% else %}—{% endif %}</td>
+      <td class="r">{% if it.is_leaf %}{{ it.unit_price|fmt_money }}{% else %}—{% endif %}</td>
+      <td class="r">{{ it.total_price|fmt_money }}</td>
+      <td class="r">{% if it.weight_pct > 0 %}{{ it.weight_pct|fmt_num:2 }}%{% endif %}</td>
+      <td class="c">{{ it.level }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="9" class="c" style="padding:30px; color:#888">Belum ada item BOQ.</td></tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="6" class="r">TOTAL (PRE-PPN)</td>
+      <td class="r">{{ total_pre_ppn|fmt_money }}</td>
+      <td colspan="2"></td>
+    </tr>
+    <tr>
+      <td colspan="6" class="r">PPN ({{ ppn_pct }}%)</td>
+      <td class="r">{{ ppn_amount|fmt_money }}</td>
+      <td colspan="2"></td>
+    </tr>
+    <tr class="grand">
+      <td colspan="6" class="r">TOTAL (POST-PPN)</td>
+      <td class="r">{{ total_post_ppn|fmt_money }}</td>
+      <td colspan="2"></td>
+    </tr>
+  </tfoot>
+</table>
+
+<table class="signature">
+  <tr>
+    <td>Mengetahui,<br><strong>PPK</strong><div class="nm">{{ ppk_name }}<br><span style="font-weight:normal;font-size:8pt">NIP {{ ppk_nip }}</span></div></td>
+    <td>Disetujui,<br><strong>Konsultan MK</strong><div class="nm">.....................</div></td>
+    <td>Diajukan,<br><strong>Kontraktor</strong><div class="nm">{{ contractor_name }}</div></td>
+  </tr>
+</table>
+
+</body>
+</html>
