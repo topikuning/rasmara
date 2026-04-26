@@ -99,7 +99,11 @@ class Contract(SoftDeleteModel):
     # ----- helpers nilai (Bagian 7) -----
     @property
     def boq_pre_ppn_value(self) -> Decimal:
-        """Sum nilai item BOQ leaf (PRE-PPN) di revisi aktif."""
+        """Sum nilai item BOQ leaf (PRE-PPN) di revisi aktif.
+
+        Fail-safe: bila modul BOQ belum di-migrate / table belum ada / error
+        DB lain, return 0.00 instead of 500.
+        """
         try:
             from apps.boq.models import BOQItem
             from django.db.models import Sum
@@ -109,7 +113,7 @@ class Contract(SoftDeleteModel):
                 is_leaf=True,
             ).aggregate(total=Sum("total_price"))
             return (agg["total"] or Decimal("0.00")).quantize(Decimal("0.01"))
-        except (ImportError, LookupError):
+        except Exception:  # noqa: BLE001 — sengaja broad utk safety
             return Decimal("0.00")
 
     @property

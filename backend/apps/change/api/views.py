@@ -77,11 +77,12 @@ class VariationOrderViewSet(viewsets.ModelViewSet):
         return VariationOrderDetailSerializer
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, updated_by=self.request.user)
+        # VariationOrder extends TimeStampedModel saja — tidak punya created_by/updated_by.
+        serializer.save()
 
     def perform_update(self, serializer):
         _assert_vo_writable(serializer.instance)
-        serializer.save(updated_by=self.request.user)
+        serializer.save()
 
     def perform_destroy(self, instance: VariationOrder):
         _assert_vo_writable(instance)
@@ -190,14 +191,15 @@ class AddendumViewSet(viewsets.ModelViewSet):
         return AddendumDetailSerializer
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, updated_by=self.request.user)
+        # Addendum extends TimeStampedModel saja — tidak punya created_by/updated_by.
+        serializer.save()
 
     def perform_update(self, serializer):
         if serializer.instance.status != AddendumStatus.DRAFT:
             from common.exceptions import DomainError
             raise DomainError("Addendum sudah SIGNED, tidak bisa diedit.",
                               code="ADDENDUM_LOCKED")
-        serializer.save(updated_by=self.request.user)
+        serializer.save()
 
     def perform_destroy(self, instance: Addendum):
         if instance.status != AddendumStatus.DRAFT:
@@ -308,11 +310,11 @@ class FieldObservationViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(submitted_by=self.request.user, created_by=self.request.user,
-                          updated_by=self.request.user)
+        # FieldObservation extends TimeStampedModel — hanya punya submitted_by.
+        serializer.save(submitted_by=self.request.user)
 
     def perform_update(self, serializer):
-        serializer.save(updated_by=self.request.user)
+        serializer.save()
 
     @action(detail=True, methods=["post"], url_path="photos",
             parser_classes=[MultiPartParser, FormParser])

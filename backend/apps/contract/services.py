@@ -123,19 +123,19 @@ def evaluate_activation_gates(contract: Contract) -> GateResult:
                 ok=True,
                 detail=f"Revisi V0 disetujui pada {boq.approved_at:%d %b %Y}.",
             ))
-    except (ImportError, LookupError):
-        # Modul BOQ belum terpasang — skip cek (akan ada saat modul 4)
+    except Exception:  # noqa: BLE001 — fail-safe: catch DB error (table belum ada, dll)
+        boq = None
         checks.append(GateCheck(
             code="BOQ_V0_REQUIRED",
             label="Revisi BOQ V0 APPROVED dan aktif wajib ada.",
             ok=False,
-            detail="Modul BOQ belum aktif. Akan dicek setelah modul BOQ dipasang.",
+            detail="Modul BOQ belum di-migrate atau error.",
         ))
 
     # ---- Cek 4: sum(BOQ leaf) * (1+PPN) <= nilai kontrak ----
     try:
         from apps.boq.models import BOQItem  # type: ignore
-        if 'boq' in locals() and boq is not None:
+        if boq is not None:
             from django.db.models import Sum
             agg = BOQItem.objects.filter(
                 boq_revision=boq, is_leaf=True
@@ -158,8 +158,8 @@ def evaluate_activation_gates(contract: Contract) -> GateResult:
                     ok=True,
                     detail=f"BOQ post-PPN Rp {est_post_ppn:,.2f} ≤ nilai kontrak Rp {contract.original_value:,.2f}.",
                 ))
-    except (ImportError, LookupError):
-        pass  # sudah ada gate failure dari cek #3
+    except Exception:  # noqa: BLE001 — sudah ada gate failure dari cek #3
+        pass
 
     return GateResult(ok=all(c.ok for c in checks), checks=checks)
 

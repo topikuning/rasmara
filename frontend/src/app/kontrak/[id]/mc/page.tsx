@@ -297,6 +297,11 @@ function MCFormModal({
                     placeholder="Kondisi lapangan, hasil pengukuran, dst." />
         </div>
 
+        <p className="text-xs text-muted-fg pt-1">
+          📷 Foto bukti dapat diunggah <strong>setelah</strong> MC ini disimpan —
+          tombol "Tambah foto" akan tampil di kartu MC pada daftar di bawah.
+        </p>
+
         <div className="flex gap-2 pt-2 border-t">
           <button type="button" onClick={onClose} className="btn-secondary flex-1" disabled={submitting}>Batal</button>
           <button type="submit" className="btn-primary flex-1" disabled={submitting}>
